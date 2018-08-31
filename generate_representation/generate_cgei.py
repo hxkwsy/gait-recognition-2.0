@@ -5,6 +5,7 @@ from pylab import *
 import os
 import re
 
+import cv2
 
 def is_right_to_left(load_path, prefix, W, H):
     N = 352
@@ -39,7 +40,8 @@ def is_right_to_left(load_path, prefix, W, H):
 #
 # print('Result 1 : {0}\nResult 2 : {1}'.format(result1, result2))
 
-def generate_gei(load_path, save_path, ftxt, W, H, convert_to_rigth_to_left = False):
+
+def generate_cgei(load_path, save_path, ftxt, W, H, convert_to_rigth_to_left=False):
     '''
     function creates gei image a sequence of images
     :param load_path:  path to a dir with images
@@ -63,8 +65,8 @@ def generate_gei(load_path, save_path, ftxt, W, H, convert_to_rigth_to_left = Fa
         txt = '{0:03d}'.format(i)
         name = '{0}/{1}-{2}.png'.format(load_path, ftxt, txt)
         #name = path + '\\' + ftxt + '-' + txt + '.png'
-        img = Image.open(name)
-        X = matrix(reshape(img.getdata(), (M, N)))
+        img = cv2.imread(name, 0)
+        X = matrix(reshape(img, (M, N)))
 
         hh = zeros(N, float)
         hv = zeros(M, float)
@@ -154,6 +156,7 @@ def generate_gei(load_path, save_path, ftxt, W, H, convert_to_rigth_to_left = Fa
     for i in range(0, len(slst)):
         t = slst[i]
         X = copy(t[0])
+        X = cv2.Canny(X, 100, 200)
         [h, w] = shape(X)
         [xc, yc] = t[1]
         for n in range(0, w):
@@ -181,14 +184,14 @@ def generate_gei(load_path, save_path, ftxt, W, H, convert_to_rigth_to_left = Fa
         result = is_right_to_left(load_path, ftxt, W, H)
         if not result:
             im2 = im2.transpose(Image.FLIP_LEFT_RIGHT)
-    save_name = '{0}/gei_{1}.bmp'.format(save_path, ftxt)
+    save_name = '{0}/cgei_{1}.bmp'.format(save_path, ftxt)
     im2.save(save_name, 'bmp')
 
 
 def process_all_gei():
 
     load_dir = "/home/dyschemist/Workspace/datasets/gait/casia/silhouettes"
-    save_dir = "/home/dyschemist/Workspace/datasets/gei"
+    save_dir = "/home/dyschemist/Workspace/datasets/cgei"
     W = 88
     H = 160
     pattern = re.compile('00_*')
@@ -200,6 +203,6 @@ def process_all_gei():
                 os.makedirs(save_dir)
             load_path = '{0}/{1}/{2}'.format(load_dir, dir, sample)
             ftxt = '{0}-{1}'.format(dir, sample)
-            generate_gei(load_path, save_dir, ftxt, W, H,convert_to_rigth_to_left=True)
+            generate_cgei(load_path, save_dir, ftxt, W, H, convert_to_rigth_to_left=True)
 
 process_all_gei()
