@@ -74,8 +74,73 @@ for subject in subjects:
         if not is_right_to_left(sequence_dir):
             continue
         stride, data = load_gait_sequence(sequence_dir)
-        data_container.append( (subject, sequence, stride, data))
+        data_container.append([subject, sequence, stride, data])
 
 print('Data loading - [DONE]')
+print('DCT feature extraction ...')
+from scipy.fftpack import dct
 
+from sklearn.preprocessing import MinMaxScaler
 
+data_container_size = len(data_container)
+for i in range(0, data_container_size):
+    dct_transformed_data = dct(data_container[i][3])
+    dct_transformed_data = dct_transformed_data[0:3900]
+    data_container[i].append(dct_transformed_data)
+
+print('DCT feature extraction - DONE')
+
+print('PCA dimensionality reduction ...')
+
+from sklearn.decomposition import PCA
+n_components = 7
+pca = PCA(n_components=n_components)
+
+data_matrix = np.zeros( (data_container_size, 3900))
+
+for i in range(0, data_container_size):
+    data_matrix[i, :] = data_container[i][4]
+
+pca_data_matrix = pca.fit_transform(data_matrix)
+
+print('PCA dimensionality reduction DONE')
+
+#generate y for ANN training
+
+subject_to_code = {}
+current_code_counter = 0
+for element in data_container:
+    if not element[0] in subject_to_code:
+        subject_to_code[element[0]] = current_code_counter
+        current_code_counter += 1
+
+no_of_subjects = len(subject_to_code)
+
+y = np.zeros((data_container_size))
+
+for i in range(0, data_container_size):
+    subject = data_container[i][0]
+    y[i] = subject_to_code[subject]
+
+print('ANN recognition ...')
+
+from sklearn.neural_network import MLPClassifier
+
+nn = MLPClassifier(solver='lbfgs', alpha=1e-5, hidden_layer_sizes=(10,10,10,10,10,10,10,10,10,10,10,10,10,10, ))
+
+print('Training started')
+
+nn.fit(pca_data_matrix, y)
+
+print('Training is done')
+
+correct_recognition = 0
+for i in range(0, data_container_size):
+    x = pca_data_matrix[i, :]
+    result = nn.predict([x])
+    if result == subject_to_code[data_container[i][0]]:
+        correct_recognition += 1
+
+print('Accuracy {0}%'.format(correct_recognition/data_container_size*100.0))
+
+# print('ANN recognition DONE')
